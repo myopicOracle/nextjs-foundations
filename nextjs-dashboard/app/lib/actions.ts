@@ -29,14 +29,22 @@ export async function createInvoice(formData: FormData) {
     const amountInCents = amount * 100
     const date = new Date().toISOString().split('T')[0]
 
-    await sql`
-        INSERT INTO invoices (customer_id, amount, status, date)
-        VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
-    `
+    // Server Action
+    try {
+        await sql`
+            INSERT INTO invoices (customer_id, amount, status, date)
+            VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
+        `
+    } catch (e) {
+        console.log(e)
+        return {
+            message: 'Database Error: Failed to create invoice.',
+        }
+    }
 
     // update cached route and redirect user
     revalidatePath('/dashboard/invoices')
-    redirect('/dashboard/invoices')
+    redirect('/dashboard/invoices') // throws own error so place after try/catch
 }
 
 export async function updateInvoice(id: string, formData: FormData) {
@@ -48,17 +56,29 @@ export async function updateInvoice(id: string, formData: FormData) {
 
     const amountInCents = amount * 100
 
-    await sql`
-    UPDATE invoices
-    SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
-    WHERE id = ${id}
-  `
+    // Server Action
+    try {
+        await sql`
+            UPDATE invoices
+            SET customer_id = ${customerId}, amount = ${amountInCents}, status = ${status}
+            WHERE id = ${id}
+        `
+    } catch (e) {
+        console.log(e)
+
+        return {
+            message: 'Database Error: Failed to update invoice.',
+        }
+    }
 
     revalidatePath('/dashboard/invoices')
     redirect('/dashboard/invoices')
 }
 
 export async function deleteInvoice(id: string) {
+    // manually added for uncaught exceptions during testing - remove before prod
+    // throw new Error('Failed to Delete Invoice')
+
     await sql`DELETE FORM invoices WHERE id = ${id}`
     revalidatePath('/dashboard/invoices')
 }
